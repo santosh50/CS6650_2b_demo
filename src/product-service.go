@@ -1,12 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type Product struct {
@@ -129,17 +133,76 @@ func addProductDetails(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// ---------- Observability: RED metrics + JSON request logs ----------
+
+var (
+	reqTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "http_requests_total", Help: "Total requests"},
+		[]string{"method", "endpoint", "status"})
+	errTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "http_errors_total", Help: "Non-2xx responses"},
+		[]string{"method", "endpoint", "status"})
+	reqDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "http_request_duration_seconds", Help: "Request latency",
+		Buckets: []float64{.00001, .000025, .00005, .0001, .00025, .0005, .001, .0025, .005, .01, .025, .05, .1, .25, .5, 1}},
+		[]string{"method", "endpoint"})
+)
+
+func init() { prometheus.MustRegister(reqTotal, errTotal, reqDuration) }
+
+type logLine struct {
+	TS         string  `json:"ts"`
+	Method     string  `json:"method"`
+	Endpoint   string  `json:"endpoint"`
+	Path       string  `json:"path"`
+	Status     int     `json:"status"`
+	DurationMS float64 `json:"duration_ms"`
+}
+
+func observe() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+		dur := time.Since(start)
+
+		endpoint := c.FullPath() // route template, not the raw URL
+		if endpoint == "" {
+			endpoint = "unmatched"
+		}
+		if endpoint == "/metrics" { // keep Prometheus scrapes out of RED data and logs
+			return
+		}
+		status := c.Writer.Status()
+		code := strconv.Itoa(status)
+
+		reqTotal.WithLabelValues(c.Request.Method, endpoint, code).Inc()
+		if status < 200 || status >= 300 {
+			errTotal.WithLabelValues(c.Request.Method, endpoint, code).Inc()
+		}
+		reqDuration.WithLabelValues(c.Request.Method, endpoint).Observe(dur.Seconds())
+
+		line, _ := json.Marshal(logLine{
+			TS: time.Now().UTC().Format(time.RFC3339Nano), Method: c.Request.Method,
+			Endpoint: endpoint, Path: c.Request.URL.Path, Status: status,
+			DurationMS: float64(dur.Microseconds()) / 1000.0,
+		})
+		os.Stdout.Write(append(line, '\n'))
+	}
+}
+
 func main() {
 	seed(1000)
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
-	r.Use(gin.CustomRecovery(func(c *gin.Context, _ any) {
+	// observe() is the OUTER middleware, so it still sees the 500 that recovery produces
+	r.Use(observe(), gin.CustomRecovery(func(c *gin.Context, _ any) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError,
 			ErrorResponse{Error: "INTERNAL_ERROR", Message: "internal server error"})
 	}))
 
 	r.GET("/products/:productId", getProduct)
 	r.POST("/products/:productId/details", addProductDetails)
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	if os.Getenv("ENABLE_DEBUG") == "1" { // the only way to demo a 500
 		r.GET("/debug/panic", func(c *gin.Context) { panic("forced") })

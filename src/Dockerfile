@@ -1,9 +1,10 @@
 FROM golang:1.27-alpine AS build
+ARG GOARCH=amd64
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o server .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${GOARCH} go build -ldflags="-s -w" -o server .
 
 FROM alpine:3.19
 WORKDIR /app
