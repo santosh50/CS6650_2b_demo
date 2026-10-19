@@ -1,0 +1,278 @@
+{
+  "info": {
+    "_postman_id": "c3fc8941-30dd-4122-b1ed-f841672ada27",
+    "name": "Product API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "14401789",
+    "_collection_link": "https://go.postman.co/collection/14401789-c3fc8941-30dd-4122-b1ed-f841672ada27?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "GET product 200",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/products/1",
+          "host": ["{{baseUrl}}"],
+          "path": ["products", "1"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "GET Product 404",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 404\", () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/products/99999",
+          "host": ["{{baseUrl}}"],
+          "path": ["products", "99999"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "POST details 204",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 204\", () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"product_id\":1,\"sku\":\"NEW-1\",\"manufacturer\":\"Acme\",\"category_id\":2,\"weight\":0,\"some_other_id\":3}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/products/1/details",
+          "host": ["{{baseUrl}}"],
+          "path": ["products", "1", "details"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "GET product after update",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"sku was updated\", () => pm.expect(pm.response.json().sku).to.eql(\"NEW-1\"));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/products/1",
+          "host": ["{{baseUrl}}"],
+          "path": ["products", "1"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "POST details 400 missing fields",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "\t{\"sku\":\"x\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/products/1/details",
+          "host": ["{{baseUrl}}"],
+          "path": ["products", "1", "details"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "POST details 400 malformed JSON",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "\t{bad",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/products/1/details",
+          "host": ["{{baseUrl}}"],
+          "path": ["products", "1", "details"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "POST details 400 id mismatch",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"product_id\":2,\"sku\":\"x\",\"manufacturer\":\"a\",\"category_id\":1,\"weight\":1,\"some_other_id\":1}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/products/1/details",
+          "host": ["{{baseUrl}}"],
+          "path": ["products", "1", "details"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "POST details 404 missing product",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 404\", () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"product_id\":99999,\"sku\":\"x\",\"manufacturer\":\"a\",\"category_id\":1,\"weight\":1,\"some_other_id\":1}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/products/99999/details",
+          "host": ["{{baseUrl}}"],
+          "path": ["products", "99999", "details"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "GET debug panic 500",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 500\", () => pm.response.to.have.status(500));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/debug/panic",
+          "host": ["{{baseUrl}}"],
+          "path": ["debug", "panic"]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    }
+  ]
+}
