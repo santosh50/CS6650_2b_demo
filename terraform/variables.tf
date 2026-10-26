@@ -30,3 +30,8 @@ variable "log_retention_days" {
   type    = number
   default = 7
 }
+
+variable "work_rounds" {
+  type    = number
+  default = 19
+}

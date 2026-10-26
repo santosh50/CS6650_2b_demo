@@ -34,6 +34,8 @@ module "ecs" {
   log_group_name     = module.logging.log_group_name
   ecs_count          = var.ecs_count
   region             = var.aws_region
+  work_rounds        = var.work_rounds
+  depends_on         = [docker_registry_image.app]
 }
 
 

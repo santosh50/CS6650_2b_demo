@@ -1,39 +1,45 @@
 import os
 import random
 
-from locust import FastHttpUser, HttpUser, between, constant, task
+from locust import FastHttpUser, LoadTestShape, constant, task
 
-BaseUser = HttpUser if os.getenv("LOCUST_CLIENT", "fast").lower() == "http" else FastHttpUser
-
-MAX_ID = 1000
-GET_WEIGHT = int(os.getenv("GET_WEIGHT", "9"))
-POST_WEIGHT = int(os.getenv("POST_WEIGHT", "1"))
-BAD_WEIGHT = int(os.getenv("BAD_WEIGHT", "0"))
+TERMS = ["electronics", "Electro", "books", "HOME", "garden", "toys",
+         "alpha", "Beta", "nova", "product", "zzz-nomatch"]
 
 
-class ProductUser(BaseUser):
-    wait_time = between(0.1, 0.5) if os.getenv("THINK") == "1" else constant(0)
+class SearchUser(FastHttpUser):
+    wait_time = constant(0)  # minimal wait: next request as soon as the last returns
 
-    @task(GET_WEIGHT)
-    def get_product(self):
-        self.client.get(f"/products/{random.randint(1, MAX_ID)}", name="/products/[id]")
+    @task
+    def search(self):
+        q = random.choice(TERMS)
+        with self.client.get(f"/products/search?q={q}", name="/products/search",
+                             catch_response=True) as r:
+            if r.status_code != 200:
+                r.failure(f"HTTP {r.status_code}")
+            elif "total_found" not in r.text:
+                r.failure("missing total_found")
 
-    @task(POST_WEIGHT)
-    def update_details(self):
-        pid = random.randint(1, MAX_ID)
-        self.client.post(
-            f"/products/{pid}/details",
-            json={
-                "product_id": pid,
-                "sku": f"SKU-{pid}-{random.randint(1, 9999)}",
-                "manufacturer": "Acme",
-                "category_id": 1,
-                "weight": 10,
-                "some_other_id": 1,
-            },
-            name="/products/[id]/details",
-        )
 
-    @task(BAD_WEIGHT)
-    def get_missing(self):
-        self.client.get("/products/999999", name="/products/[missing]")
+SHAPE = os.getenv("SHAPE")
+
+if SHAPE == "ramp":
+    class GradualRamp(LoadTestShape):
+        """+5 users every minute from 5 to 40, stop at 15 min."""
+        def tick(self):
+            t = self.get_run_time()
+            if t > 900:
+                return None
+            return min(40, 5 + 5 * int(t // 60)), 5
+
+elif SHAPE == "spike":
+    class SuddenSpike(LoadTestShape):
+        """3 min quiet, 5 min spike, 5 min quiet."""
+        stages = [(180, 5), (480, 40), (780, 5)]
+
+        def tick(self):
+            t = self.get_run_time()
+            for end, users in self.stages:
+                if t < end:
+                    return users, 40
+            return None

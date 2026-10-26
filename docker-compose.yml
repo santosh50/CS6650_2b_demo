@@ -3,17 +3,17 @@ services:
     build:
       context: ./src
       args:
-        GOARCH: arm64 # native on Apple Silicon; use amd64 on Intel/AMD machines
+        GOARCH: arm64
     environment:
-      ENABLE_DEBUG: "1" # local only: enables /debug/panic so a 500 can be demoed
+      ENABLE_DEBUG: "1"
     ports:
       - "8080:8080"
     logging:
       driver: json-file
       options:
-        max-size: "50m" # cap log size so a load test can't fill your disk
+        max-size: "50m"
         max-file: "3"
-    cpus: 0.25 # optional: match the Fargate task size to see saturation locally
+    cpus: 0.25
 
   prometheus:
     image: prom/prometheus
@@ -21,8 +21,6 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:
       - "9090:9090"
-    depends_on:
-      - app
 
   grafana:
     image: grafana/grafana
@@ -30,5 +28,9 @@ services:
       - "3000:3000"
     volumes:
       - ./grafana-datasource.yml:/etc/grafana/provisioning/datasources/prometheus.yml:ro
+      - grafana-data:/var/lib/grafana
     depends_on:
       - prometheus
+
+volumes:
+  grafana-data:

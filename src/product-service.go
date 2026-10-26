@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
 	"sync"
 	"time"
@@ -20,6 +22,7 @@ type Product struct {
 	CategoryID   int    `json:"category_id"`
 	Weight       int    `json:"weight"`
 	SomeOtherID  int    `json:"some_other_id"`
+	Name         string `json:"name,omitempty"`
 }
 
 // Pointers let us tell "field missing" apart from "field is 0".
@@ -65,7 +68,8 @@ func (s *store) update(p Product) bool {
 // seed runs before the server starts, so no lock is needed.
 func seed(n int) {
 	for i := 1; i <= n; i++ {
-		db.products[i] = Product{i, "SKU-" + strconv.Itoa(i), "Acme Corporation", 1, 1000, 1}
+		db.products[i] = Product{ProductID: i, SKU: "SKU-" + strconv.Itoa(i), Manufacturer: "Acme Corporation",
+			CategoryID: 1, Weight: 1000, SomeOtherID: 1}
 	}
 }
 
@@ -89,7 +93,8 @@ func validate(r productRequest) (Product, string) {
 	case r.SomeOtherID == nil || *r.SomeOtherID < 1:
 		return Product{}, "some_other_id is required and must be >= 1"
 	}
-	return Product{*r.ProductID, *r.SKU, *r.Manufacturer, *r.CategoryID, *r.Weight, *r.SomeOtherID}, ""
+	return Product{ProductID: *r.ProductID, SKU: *r.SKU, Manufacturer: *r.Manufacturer,
+		CategoryID: *r.CategoryID, Weight: *r.Weight, SomeOtherID: *r.SomeOtherID}, ""
 }
 
 func getProduct(c *gin.Context) {
@@ -192,19 +197,23 @@ func observe() gin.HandlerFunc {
 
 func main() {
 	seed(1000)
+	seedSearchProducts()
+	log.Printf("GOMAXPROCS=%d NumCPU=%d", runtime.GOMAXPROCS(0), runtime.NumCPU())
+
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
-	// observe() is the OUTER middleware, so it still sees the 500 that recovery produces
 	r.Use(observe(), gin.CustomRecovery(func(c *gin.Context, _ any) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError,
 			ErrorResponse{Error: "INTERNAL_ERROR", Message: "internal server error"})
 	}))
 
+	r.GET("/health", health)
+	r.GET("/products/search", searchProducts)
 	r.GET("/products/:productId", getProduct)
 	r.POST("/products/:productId/details", addProductDetails)
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-	if os.Getenv("ENABLE_DEBUG") == "1" { // the only way to demo a 500
+	if os.Getenv("ENABLE_DEBUG") == "1" {
 		r.GET("/debug/panic", func(c *gin.Context) { panic("forced") })
 	}
 	r.Run(":8080")

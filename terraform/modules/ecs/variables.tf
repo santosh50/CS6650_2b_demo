@@ -60,3 +60,9 @@ variable "memory" {
   default     = "512"
   description = "Memory (MiB)"
 }
+
+variable "work_rounds" {
+  type        = number
+  default     = 0
+  description = "SHA-256 rounds per checked product (simulated fixed compute)"
+}

@@ -1,6 +1,6 @@
 global:
   scrape_interval: 5s
 scrape_configs:
-  - job_name: product-api
+  - job_name: product-api-ecs
     static_configs:
-      - targets: ["app:8080"]
+      - targets: ["100.53.155.53:8080"]

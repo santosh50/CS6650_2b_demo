@@ -23,6 +23,11 @@ resource "aws_ecs_task_definition" "this" {
       containerPort = var.container_port
     }]
 
+    environment = [{
+      name  = "SEARCH_WORK_ROUNDS",
+      value = tostring(var.work_rounds)
+    }]
+
     logConfiguration = {
       logDriver = "awslogs"
       options = {
@@ -43,8 +48,8 @@ resource "aws_ecs_service" "this" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets         = var.subnet_ids
-    security_groups = var.security_group_ids
+    subnets          = var.subnet_ids
+    security_groups  = var.security_group_ids
     assign_public_ip = true
   }
 }
