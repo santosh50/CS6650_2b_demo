@@ -1,6 +1,11 @@
 # ECS Cluster
 resource "aws_ecs_cluster" "this" {
   name = "${var.service_name}-cluster"
+
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
 }
 
 # Task Definition
@@ -47,9 +52,24 @@ resource "aws_ecs_service" "this" {
   desired_count   = var.ecs_count
   launch_type     = "FARGATE"
 
+  health_check_grace_period_seconds = var.target_group_arn == null ? null : 120
+
   network_configuration {
     subnets          = var.subnet_ids
     security_groups  = var.security_group_ids
     assign_public_ip = true
+  }
+
+  dynamic "load_balancer" {
+    for_each = var.target_group_arn == null ? [] : [1]
+    content {
+      target_group_arn = var.target_group_arn
+      container_name   = "${var.service_name}-container"
+      container_port   = var.container_port
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [desired_count]
   }
 }

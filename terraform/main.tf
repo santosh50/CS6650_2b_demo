@@ -35,7 +35,8 @@ module "ecs" {
   ecs_count          = var.ecs_count
   region             = var.aws_region
   work_rounds        = var.work_rounds
-  depends_on         = [docker_registry_image.app]
+  target_group_arn   = aws_lb_target_group.this.arn
+  depends_on         = [docker_registry_image.app, aws_lb_listener.http]
 }
 
 

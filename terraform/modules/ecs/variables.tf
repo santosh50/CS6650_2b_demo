@@ -66,3 +66,9 @@ variable "work_rounds" {
   default     = 0
   description = "SHA-256 rounds per checked product (simulated fixed compute)"
 }
+
+variable "target_group_arn" {
+  type        = string
+  default     = null
+  description = "ALB target group to register tasks with (null = no load balancer)"
+}

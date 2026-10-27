@@ -19,6 +19,7 @@ services:
     image: prom/prometheus
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/sd:/etc/prometheus/sd:ro
     ports:
       - "9090:9090"
 
